@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+// servidorCatalogo.py
+service servidorCatalogo {
+    rpc queryCategoria (CategoriaRequest) returns (ListaLivros);
+    rpc queryNumero  (numeroItemRequest)  returns (LivroInfo);
+    rpc update       (UpdateRequest) returns (UpdateResponse);
+}
+
+// servidorPedidos.py
+service servidorPedidos {
+    rpc Buy (numeroItemRequest) returns (CompraResponse);
+}
+
+// servidorFront.py
+service servidorFront {
+    rpc Search (CategoriaRequest) returns (ListaLivros);
+    rpc Lookup (numeroItemRequest)  returns (LivroInfo);
+    rpc Buy    (numeroItemRequest)  returns (CompraResponse);
+}
+
+
+
+
+
+message CategoriaRequest {
+    string categoria = 1;
+}
+
+message numeroItemRequest {
+    int32 numeroItem = 1;
+}
+
+message UpdateRequest {
+    int32 numeroItem = 1;
+    int32 qty = 2;
+}
+
+message LivroInfo {
+    int32  numeroItem = 1;
+    string nome        = 2;
+    string categoria       = 3;
+    int32  quantidade       = 4;
+    string error       = 5;
+}
+
+message ListaLivros {
+    repeated LivroItem livros = 1;
+}
+
+message LivroItem {
+    int32  numeroItem = 1;
+    string nome        = 2;
+}
+
+message CompraResponse {
+    bool   success = 1;
+    string message = 2;
+}
+
+message UpdateResponse {
+    bool success = 1;
+}
