@@ -5,25 +5,23 @@ import catalogo_pb2
 import catalogo_pb2_grpc
 import sys
 
-# Lock para evitar que duas compras simultâneas passem ao mesmo tempo
+# lock para evitar que duas compras simultâneas passem ao mesmo tempo
 lock = threading.Lock()
 
 
-# ============================================================
-# IMPLEMENTAÇÃO DO SERVIDOR DE PEDIDOS
-# ============================================================
+# SERVIDOR DE PEDIDOS
 class ServidorPedidos(catalogo_pb2_grpc.servidorPedidosServicer):
 
-    def __init__(self, host_catalogo): # Recebe o endereço do servidor de catálogo e cria um canal de comunicação com ele host_catalogo = IP:porta do servidor de catálogo.
+    def __init__(self, host_catalogo): # recebe o endereço do servidor de catálogo e cria um canal de comunicação com ele host_catalogo = IP:porta do servidor de catálogo.
         
         canal = grpc.insecure_channel(host_catalogo)
         self.catalogo_stub = catalogo_pb2_grpc.servidorCatalogoStub(canal)
 
-    def Buy(self, request, context): # Tenta comprar um livro. Consulta o catálogo para ver se tem estoque e, se tiver, decrementa.
+    def Buy(self, request, context): # tenta comprar um livro. Consulta o catálogo para ver se tem estoque e, se tiver, decrementa.
         
         with lock:
             
-            # Consulta o catálogo pelo número do item
+            # consulta o catálogo pelo número do item
             info = self.catalogo_stub.queryNumero(catalogo_pb2.numeroItemRequest(numeroItem=request.numeroItem))
 
             if info.error:

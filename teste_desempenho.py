@@ -42,7 +42,7 @@ def medir_buy(stub, numero_item=ITEM_TESTE):
     return time.time() - inicio
 
 
-# ── Teste 1: cliente único ────────────────────────────────────────────────────
+# Teste 1: cliente único
 
 def teste_cliente_unico(host_front, n=NUM_REQUISICOES_PADRAO):
     print(f"\n=== Teste 1: cliente único ({n} requisições cada) ===")
@@ -64,7 +64,7 @@ def teste_cliente_unico(host_front, n=NUM_REQUISICOES_PADRAO):
     return s, b
 
 
-# ── Teste 2: múltiplos clientes simultâneos ───────────────────────────────────
+# Teste 2: múltiplos clientes simultâneos 
 
 def _worker_search(host_front, n, resultados, idx):
     stub = criar_stub(host_front)
