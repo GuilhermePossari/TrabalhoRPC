@@ -48,19 +48,23 @@ class ServidorCatalogo(catalogo_pb2_grpc.servidorCatalogoServicer): # tem que ch
         return resultado
 
     def queryNumero(self, request, context):
+        # O lock cobre toda a leitura dos campos: se liberarmos o lock após
+        # buscar_por_numero e lermos dados["copias"] fora dele, uma thread
+        # concorrente chamando update() pode modificar o valor entre os dois
+        # acessos, produzindo uma leitura inconsistente (race condition).
         with lock:
             dados = buscar_por_numero(request.numeroItem)
 
-        if dados is None:
-            return catalogo_pb2.LivroInfo(error="Livro não encontrado") # ler próximo comentário
+            if dados is None:
+                return catalogo_pb2.LivroInfo(error="Livro não encontrado")
 
-        return catalogo_pb2.LivroInfo( # não da pra retornar a variável 'dados' direto pq no gRPC só da pra retornar essas classes que a gente definiu no .proto, então tem que retornar um LivroInfo mesmo que seja só pra passar o erro e 
-            numeroItem=dados["numero"],
-            nome=dados["nome"],
-            categoria=dados["categoria"],
-            quantidade=dados["copias"],
-            error=""
-        )
+            return catalogo_pb2.LivroInfo(
+                numeroItem=dados["numero"],
+                nome=dados["nome"],
+                categoria=dados["categoria"],
+                quantidade=dados["copias"],
+                error=""
+            )
 
     def update(self, request, context):
         with lock:

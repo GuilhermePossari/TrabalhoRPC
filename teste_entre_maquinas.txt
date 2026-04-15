@@ -1,0 +1,184 @@
+===========================================================================
+  COMO TESTAR O MINIBIB.COM ENTRE DOIS COMPUTADORES
+===========================================================================
+
+PRÉ-REQUISITO: as duas máquinas precisam estar na mesma rede
+(ex: mesma rede Wi-Fi ou cabo de rede direto).
+
+Neste guia:
+  Máquina A = você  (roda os servidores)
+  Máquina B = seu amigo  (roda o cliente)
+
+Mas qualquer distribuição funciona — ajuste os IPs conforme sua escolha.
+
+---------------------------------------------------------------------------
+PASSO 1 — Descobrir o IP de cada máquina
+---------------------------------------------------------------------------
+
+Em cada computador, abra o terminal e rode:
+
+  Linux/Mac:
+    ip a
+    ou
+    hostname -I
+
+  Windows:
+    ipconfig
+
+Procure o IP na interface de rede local, geralmente começa com
+192.168.x.x ou 10.x.x.x
+
+Exemplo do que pode aparecer:
+    inet 192.168.1.10/24  ← esse número antes da / é o IP
+
+Anote os dois IPs. Neste guia vamos usar como exemplo:
+  IP da Máquina A (servidores): 192.168.1.10
+  IP da Máquina B (cliente):    192.168.1.20
+
+---------------------------------------------------------------------------
+PASSO 2 — Verificar se as máquinas se enxergam
+---------------------------------------------------------------------------
+
+Na Máquina B, teste se consegue "ver" a Máquina A:
+
+  ping 192.168.1.10
+
+Se aparecer resposta (bytes recebidos), está ok.
+Se der "host unreachable" ou não responder, há um problema de rede ou
+firewall — veja o Passo 3.
+
+---------------------------------------------------------------------------
+PASSO 3 — Liberar as portas no firewall (se necessário)
+---------------------------------------------------------------------------
+
+O projeto usa as portas 50050, 50051 e 50052.
+Se o ping funcionou mas a conexão gRPC falhar, libere as portas.
+
+  Linux (UFW):
+    sudo ufw allow 50050
+    sudo ufw allow 50051
+    sudo ufw allow 50052
+
+  Linux (firewalld):
+    sudo firewall-cmd --add-port=50050/tcp --permanent
+    sudo firewall-cmd --add-port=50051/tcp --permanent
+    sudo firewall-cmd --add-port=50052/tcp --permanent
+    sudo firewall-cmd --reload
+
+  Windows:
+    (no PowerShell como administrador)
+    netsh advfirewall firewall add rule name="gRPC50050" protocol=TCP dir=in localport=50050 action=allow
+    netsh advfirewall firewall add rule name="gRPC50051" protocol=TCP dir=in localport=50051 action=allow
+    netsh advfirewall firewall add rule name="gRPC50052" protocol=TCP dir=in localport=50052 action=allow
+
+---------------------------------------------------------------------------
+PASSO 4 — Instalar dependências nas duas máquinas
+---------------------------------------------------------------------------
+
+Em CADA máquina, dentro da pasta do projeto:
+
+  python3 -m venv venv
+  source venv/bin/activate          # Linux/Mac
+  venv\Scripts\activate             # Windows
+
+  pip install grpcio grpcio-tools
+
+---------------------------------------------------------------------------
+PASSO 5 — Iniciar os servidores (Máquina A)
+---------------------------------------------------------------------------
+
+Abra 3 terminais na Máquina A (ou use tmux/screen).
+Em cada um, ative o venv primeiro:
+
+  source venv/bin/activate
+
+Terminal 1 — Servidor de Catálogo:
+  python3 servidorCatalogo.py 50051
+
+Terminal 2 — Servidor de Pedidos:
+  python3 servidorPedidos.py 50052 localhost:50051
+
+Terminal 3 — Servidor Front-End:
+  python3 servidorFront.py 50050 localhost:50051 localhost:50052
+
+Você deve ver algo como:
+  Servidor de Catálogo rodando na porta 50051...
+  Servidor de Pedidos rodando na porta 50052...
+  Servidor Front-End rodando na porta 50050...
+
+ATENÇÃO: os servidores de Pedidos e Front-End usam "localhost" para falar
+entre si porque todos rodam na Máquina A. Somente o cliente (Máquina B)
+precisa usar o IP externo 192.168.1.10.
+
+---------------------------------------------------------------------------
+PASSO 6 — Rodar o cliente (Máquina B)
+---------------------------------------------------------------------------
+
+No terminal da Máquina B, com o venv ativado:
+
+  python3 cliente.py 192.168.1.10:50050
+                     ^^^^^^^^^^^^^^^^^
+                     IP da Máquina A + porta do front-end
+
+Você deve ver o menu:
+  Operações disponíveis:
+    1 - search <topico>
+    2 - lookup <numero_item>
+    3 - buy    <numero_item>
+    0 - sair
+
+Teste com:
+  search computacao
+  lookup 739
+  buy 739
+
+---------------------------------------------------------------------------
+PASSO 7 — Rodar o teste de desempenho entre máquinas (Máquina B)
+---------------------------------------------------------------------------
+
+  python3 teste_desempenho.py 192.168.1.10:50050 5 30
+
+Isso roda 5 clientes simultâneos com 30 requisições cada, medindo
+latência e throughput com tráfego real de rede entre as máquinas.
+
+Compare os números com os obtidos em loopback (tudo na mesma máquina)
+para ver o impacto da latência de rede real.
+
+LEMBRETE: reinicie o servidor de catálogo (Máquina A) antes de rodar
+o teste de desempenho, para restaurar o estoque ao estado inicial.
+Caso contrário, o estoque de buy zera rápido e os tempos ficam
+distorcidos (compras com erro retornam mais rápido que as bem-sucedidas).
+
+---------------------------------------------------------------------------
+RESUMO RÁPIDO (cola para a hora H)
+---------------------------------------------------------------------------
+
+  MÁQUINA A (servidores) — substitua pelo IP real da Máquina A:
+    Terminal 1:  python3 servidorCatalogo.py 50051
+    Terminal 2:  python3 servidorPedidos.py 50052 localhost:50051
+    Terminal 3:  python3 servidorFront.py 50050 localhost:50051 localhost:50052
+
+  MÁQUINA B (cliente) — substitua 192.168.1.10 pelo IP real da Máquina A:
+    python3 cliente.py 192.168.1.10:50050
+    python3 teste_desempenho.py 192.168.1.10:50050 5 30
+
+---------------------------------------------------------------------------
+PROBLEMAS COMUNS
+---------------------------------------------------------------------------
+
+"Connection refused" ou "failed to connect"
+  → Verifique se os servidores na Máquina A estão rodando.
+  → Verifique se o IP está correto (rode "ip a" na Máquina A).
+  → Verifique firewall (Passo 3).
+
+"ModuleNotFoundError: No module named 'grpc'"
+  → O venv não está ativado. Rode: source venv/bin/activate
+
+"ModuleNotFoundError: No module named 'catalogo_pb2'"
+  → O cliente está rodando de uma pasta diferente. Use "cd" para entrar
+    na pasta do projeto antes de rodar o python.
+
+Os servidores respondem mas buy sempre falha com "fora de estoque"
+  → O estoque zerou. Reinicie o servidorCatalogo.py na Máquina A.
+
+===========================================================================

@@ -19,13 +19,13 @@ class ServidorFront(catalogo_pb2_grpc.servidorFrontServicer):
         canal_pedidos = grpc.insecure_channel(host_pedidos)
         self.pedidos_stub = catalogo_pb2_grpc.servidorPedidosStub(canal_pedidos)
 
-    def search(self, request, context):
-        return self.catalogo_stub.queryCategoria(catalogo_pb2.categoriaRequest(categoria=request.categoria))
-    
-    def lookup(self, request, context):
+    def Search(self, request, context):
+        return self.catalogo_stub.queryCategoria(catalogo_pb2.CategoriaRequest(categoria=request.categoria))
+
+    def Lookup(self, request, context):
         return self.catalogo_stub.queryNumero(catalogo_pb2.numeroItemRequest(numeroItem=request.numeroItem))
-    
-    def buy(self, request, context):
+
+    def Buy(self, request, context):
         return self.pedidos_stub.Buy(catalogo_pb2.numeroItemRequest(numeroItem=request.numeroItem))
 
 

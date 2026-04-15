@@ -1,4 +1,4 @@
-#!/home/rafalanconi/SISTEMAS_DISTRIBUIDOS/TrabalhoRPC/venv/bin/python3
+#!/home/guilherme-possari/Estudo/UEL/SistemasDistribuidos/TrabalhoRPC/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
